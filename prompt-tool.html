@@ -1,1 +1,1030 @@
 
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO-STAR提示词生成器 - 大鱼AI工具集</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --light: #f8fafc;
+            --dark: #0f172a;
+            --gray-dark: #1e293b;
+            --gray-light: #94a3b8;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --transition: all 0.25s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
+            min-height: 100vh;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        /* 导航栏 */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 5%;
+            background-color: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--light);
+        }
+
+        .logo-icon {
+            font-size: 1.8rem;
+            color: var(--primary);
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+        }
+
+        .nav-link {
+            color: var(--gray-light);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 1rem;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary);
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--light);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* 背景装饰 */
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .bg-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.25;
+        }
+
+        .blob-1 {
+            width: 500px;
+            height: 500px;
+            background: var(--primary);
+            top: -150px;
+            right: -100px;
+            animation: float 18s ease-in-out infinite;
+        }
+
+        .blob-2 {
+            width: 600px;
+            height: 600px;
+            background: var(--secondary);
+            bottom: -200px;
+            left: -150px;
+            animation: float 22s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-25px) scale(1.05); }
+        }
+
+        /* 主容器 */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 50px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 0 20px;
+        }
+
+        .title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            position: relative;
+            display: inline-block;
+        }
+
+        .title::after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        .subtitle {
+            color: var(--gray-light);
+            font-size: 1.15rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* 提示词生成器容器 */
+        .prompt-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        /* 左侧表单区域 */
+        .prompt-form-panel {
+            background: var(--gray-dark);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(99, 102, 241, 0.05);
+            transition: var(--transition);
+        }
+
+        .prompt-form-panel:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(99, 102, 241, 0.15);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .panel-icon {
+            width: 44px;
+            height: 44px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .panel-title {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--light);
+        }
+
+        .form-group {
+            margin-bottom: 26px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: var(--light);
+            font-size: 1rem;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 13px 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--light);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tag i {
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .tag i:hover {
+            color: var(--light);
+        }
+
+        .style-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .style-option {
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .style-option:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .style-option.selected {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 13px 24px;
+            border-radius: var(--radius-md);
+            border: none;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        /* 右侧结果区域 */
+        .prompt-result-panel {
+            background: var(--gray-dark);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(99, 102, 241, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .result-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-title {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-title i {
+            color: var(--primary);
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: none;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            color: var(--gray-light);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+
+        .action-btn:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .result-content {
+            padding: 30px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .empty-state {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--gray-light);
+            text-align: center;
+            padding: 20px;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--light);
+        }
+
+        .prompt-result {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            font-family: monospace;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: none;
+        }
+
+        .result-meta {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(99, 102, 241, 0.08);
+            display: none;
+        }
+
+        .meta-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .usage-tips {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 3px solid var(--accent);
+            padding: 15px;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            margin-top: 15px;
+        }
+
+        .usage-tips h4 {
+            color: var(--accent);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+
+        .usage-tips ul {
+            padding-left: 20px;
+            font-size: 0.9rem;
+            color: var(--gray-light);
+        }
+
+        .usage-tips li {
+            margin-bottom: 5px;
+        }
+
+        /* 历史记录 */
+        .history-section {
+            margin-top: 30px;
+            background: var(--gray-dark);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid rgba(99, 102, 241, 0.05);
+            padding: 25px 30px;
+        }
+
+        .history-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-title i {
+            color: var(--primary);
+        }
+
+        .history-items {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .history-item {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: var(--radius-sm);
+            padding: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .history-item:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .history-name {
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .history-date {
+            font-size: 0.8rem;
+            color: var(--gray-light);
+        }
+
+        .history-preview {
+            font-size: 0.9rem;
+            color: var(--gray-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 25px 0;
+            color: var(--gray-light);
+            font-size: 0.95rem;
+            border-top: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer a:hover {
+            color: var(--accent);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .prompt-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 30px 15px;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background-color: var(--gray-dark);
+                flex-direction: column;
+                padding: 1.5rem;
+                gap: 1.2rem;
+                border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+            }
+
+            .nav-links.show {
+                display: flex;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .style-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        /* 亮色模式适配 */
+        @media (prefers-color-scheme: light) {
+            :root {
+                --dark: #f8fafc;
+                --gray-dark: #ffffff;
+                --light: #0f172a;
+                --gray-light: #64748b;
+            }
+
+            .prompt-form-panel, .prompt-result-panel, .history-section {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            }
+
+            .navbar {
+                background-color: rgba(255, 255, 255, 0.85);
+            }
+
+            input[type="text"],
+            textarea,
+            .prompt-result,
+            .history-item {
+                background: rgba(0, 0, 0, 0.02);
+                color: var(--dark);
+            }
+
+            .style-option, .tag {
+                background: rgba(99, 102, 241, 0.05);
+            }
+            
+            .style-option.selected, .tag {
+                background: rgba(99, 102, 241, 0.1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="logo-text">大鱼AI工具集</div>
+        </a>
+        
+         <div class="nav-links">
+            <a href="index.html" class="nav-link">
+                <i class="fas fa-home"></i> 首页
+            </a>
+            <a href="img_beautified.html" class="nav-link>
+                <i class="fas fa-image"></i> AI绘图
+            </a>
+            <a href="https://www.visioncortex.org/vtracer/" class="nav-link">
+                <i class="fas fa-video"></i> 矢量生成
+            </a>
+            <a href="prompt-tool.html" class="nav-link active">
+                <i class="fas fa-magic"></i> 提示词工具
+            </a>
+            <a href="code-tools.html" class="nav-link">
+                <i class="fas fa-code"></i> 代码工具
+            </a>
+        </div>
+        
+        <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <i class="fas fa-bars"></i>
+        </button>
+    </nav>
+
+    <!-- 背景装饰 -->
+    <div class="bg-decoration">
+        <div class="bg-blob blob-1"></div>
+        <div class="bg-blob blob-2"></div>
+    </div>
+    
+    <div class="main-container">
+        <header class="header">
+            <h1 class="title">CO-STAR提示词生成器</h1>
+            <p class="subtitle">基于新加坡冠军提示词框架，生成精准有效的AI提示词，提升创作质量与效率</p>
+        </header>
+        
+        <div class="prompt-container">
+            <!-- 左侧表单区域 -->
+            <div class="prompt-form-panel">
+                <div class="panel-header">
+                    <div class="panel-icon">
+                        <i class="fas fa-wand-magic-sparkles"></i>
+                    </div>
+                    <h2 class="panel-title">提示词设置</h2>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="mainSubject">主体内容</label>
+                    <input type="text" id="mainSubject" placeholder="描述核心主体，例如：一只红色的龙、未来城市风景">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="details">细节描述</label>
+                    <textarea id="details" placeholder="添加更多细节，例如：鳞片闪闪发光，背景是黄昏的天空，远处有城堡"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">艺术风格</label>
+                    <div class="style-options">
+                        <div class="style-option selected" data-style="现实主义">现实主义</div>
+                        <div class="style-option" data-style="印象派">印象派</div>
+                        <div class="style-option" data-style="赛博朋克">赛博朋克</div>
+                        <div class="style-option" data-style="极简主义">极简主义</div>
+                        <div class="style-option" data-style="动漫风格">动漫风格</div>
+                        <div class="style-option" data-style="像素艺术">像素艺术</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="quality">质量参数</label>
+                    <select id="quality">
+                        <option value="最高质量, 8K, 超高清, 细节丰富">最高质量 (8K, 超高清)</option>
+                        <option value="高质量, 4K, 高清, 细节清晰" selected>高质量 (4K, 高清)</option>
+                        <option value="良好质量, 1080p, 清晰">良好质量 (1080p, 清晰)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">附加参数</label>
+                    <input type="text" id="additionalParams" placeholder="添加其他参数，例如：景深效果，柔光">
+                    <div class="tags-container">
+                        <div class="tag">景深效果 <i class="fas fa-times"></i></div>
+                        <div class="tag">柔光 <i class="fas fa-times"></i></div>
+                        <div class="tag">高对比度 <i class="fas fa-times"></i></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="negativePrompt">反向提示词</label>
+                    <textarea id="negativePrompt" placeholder="描述不想要的内容，例如：模糊，低质量，变形，水印"></textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary btn-block" id="generatePromptBtn">
+                        <i class="fas fa-magic"></i> 生成提示词
+                    </button>
+                    <button class="btn btn-secondary btn-block" id="clearFormBtn">
+                        <i class="fas fa-eraser"></i> 清空
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 右侧结果区域 -->
+            <div class="prompt-result-panel">
+                <div class="result-header">
+                    <h3 class="result-title">
+                        <i class="fas fa-scroll"></i> 生成结果
+                    </h3>
+                    <div class="result-actions">
+                        <button class="action-btn" id="copyBtn" disabled>
+                            <i class="fas fa-copy"></i> 复制
+                        </button>
+                        <button class="action-btn" id="useInGeneratorBtn" disabled>
+                            <i class="fas fa-image"></i> 用于绘图
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="result-content">
+                    <div class="empty-state" id="emptyState">
+                        <i class="fas fa-magic"></i>
+                        <h3>准备生成你的提示词</h3>
+                        <p>填写左侧表单并点击"生成提示词"按钮，基于CO-STAR框架创建专业提示词</p>
+                    </div>
+                    
+                    <div class="prompt-result" id="promptResult"></div>
+                    
+                    <div class="result-meta" id="resultMeta">
+                        <h4 class="meta-title">提示词分析</h4>
+                        <div class="tags-container">
+                            <div class="tag">主体明确</div>
+                            <div class="tag">风格鲜明</div>
+                            <div class="tag">质量参数完整</div>
+                            <div class="tag">细节丰富</div>
+                        </div>
+                        
+                        <div class="usage-tips">
+                            <h4><i class="fas fa-lightbulb"></i> 使用建议</h4>
+                            <ul>
+                                <li>此提示词适用于Midjourney、Stable Diffusion等主流AI绘图工具</li>
+                                <li>如需调整风格，可以增加"风格化参数"如 --s 750</li>
+                                <li>尝试修改光照条件获得不同效果</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="history-section">
+            <h3 class="history-title">
+                <i class="fas fa-history"></i> 历史记录
+            </h3>
+            
+            <div class="history-items">
+                <div class="history-item">
+                    <div class="history-item-header">
+                        <div class="history-name">赛博朋克城市夜景</div>
+                        <div class="history-date">今天 10:24</div>
+                    </div>
+                    <div class="history-preview">未来主义赛博朋克城市夜景，霓虹灯，飞行汽车，雨景，高楼大厦，8K超高清，细节丰富，电影级渲染， dystopian ...</div>
+                </div>
+                
+                <div class="history-item">
+                    <div class="history-item-header">
+                        <div class="history-name">森林中的魔法城堡</div>
+                        <div class="history-date">昨天 16:48</div>
+                    </div>
+                    <div class="history-preview">森林中的魔法城堡，哥特式建筑，发光窗户，周围有萤火虫，满月，星空，水彩风格，细节丰富，高质量 ...</div>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="footer">
+            <p><a href="index.html">大鱼AI共创营 © 2023</a> | 基于新加坡冠军提示词框架 | <a href="image-generator.html">立即使用生成的提示词</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // 移动端菜单切换
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const navLinks = document.querySelector('.nav-links');
+        
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.classList.toggle('show');
+            const icon = mobileMenuBtn.querySelector('i');
+            if (navLinks.classList.contains('show')) {
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-times');
+            } else {
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+            }
+        });
+
+        // 风格选项点击
+        const styleOptions = document.querySelectorAll('.style-option');
+        styleOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                styleOptions.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+            });
+        });
+
+        // 标签删除功能
+        const tagCloseButtons = document.querySelectorAll('.tag i');
+        tagCloseButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                btn.parentElement.remove();
+            });
+        });
+
+        // 添加新标签
+        const additionalParamsInput = document.getElementById('additionalParams');
+        additionalParamsInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && additionalParamsInput.value.trim() !== '') {
+                e.preventDefault();
+                const tagsContainer = document.querySelector('.tags-container');
+                const newTag = document.createElement('div');
+                newTag.className = 'tag';
+                newTag.innerHTML = `${additionalParamsInput.value.trim()} <i class="fas fa-times"></i>`;
+                
+                // 添加删除功能
+                newTag.querySelector('i').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    newTag.remove();
+                });
+                
+                tagsContainer.appendChild(newTag);
+                additionalParamsInput.value = '';
+            }
+        });
+
+        // 生成提示词
+        const generatePromptBtn = document.getElementById('generatePromptBtn');
+        const promptResult = document.getElementById('promptResult');
+        const emptyState = document.getElementById('emptyState');
+        const resultMeta = document.getElementById('resultMeta');
+        const copyBtn = document.getElementById('copyBtn');
+        const useInGeneratorBtn = document.getElementById('useInGeneratorBtn');
+
+        generatePromptBtn.addEventListener('click', () => {
+            // 获取表单数据
+            const mainSubject = document.getElementById('mainSubject').value.trim() || '未指定主体';
+            const details = document.getElementById('details').value.trim() || '无额外细节';
+            const selectedStyle = document.querySelector('.style-option.selected').dataset.style;
+            const quality = document.getElementById('quality').value;
+            const negativePrompt = document.getElementById('negativePrompt').value.trim() || '无反向提示词';
+            
+            // 收集标签
+            const tags = [];
+            document.querySelectorAll('.tags-container .tag').forEach(tag => {
+                tags.push(tag.innerText.trim().replace('×', ''));
+            });
+            const additionalParams = tags.length > 0 ? tags.join(', ') : '无额外参数';
+
+            // 生成提示词 (基于CO-STAR框架)
+            const generatedPrompt = `${mainSubject}, ${details}, ${selectedStyle}风格, ${quality}, ${additionalParams}, 专业构图, 最佳照明, 视觉吸引力强\n\nNegative prompt: ${negativePrompt}`;
+
+            // 显示结果
+            emptyState.style.display = 'none';
+            promptResult.style.display = 'block';
+            promptResult.textContent = generatedPrompt;
+            resultMeta.style.display = 'block';
+
+            // 启用按钮
+            copyBtn.disabled = false;
+            useInGeneratorBtn.disabled = false;
+        });
+
+        // 清空表单
+        document.getElementById('clearFormBtn').addEventListener('click', () => {
+            document.getElementById('mainSubject').value = '';
+            document.getElementById('details').value = '';
+            document.getElementById('quality').selectedIndex = 1;
+            document.getElementById('additionalParams').value = '';
+            document.getElementById('negativePrompt').value = '';
+            
+            // 重置风格选项
+            styleOptions.forEach(opt => opt.classList.remove('selected'));
+            styleOptions[0].classList.add('selected');
+            
+            // 保留默认标签
+            const tagsContainer = document.querySelector('.tags-container');
+            while (tagsContainer.children.length > 3) {
+                tagsContainer.removeChild(tagsContainer.lastChild);
+            }
+        });
+
+        // 复制提示词
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = promptResult.textContent;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // 显示复制成功反馈
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+
+        // 用于AI绘图
+        useInGeneratorBtn.addEventListener('click', () => {
+            // 将提示词保存到localStorage，供绘图页面使用
+            localStorage.setItem('generatedPrompt', promptResult.textContent);
+            
+            // 跳转到AI绘图页面
+            window.location.href = 'image-generator.html';
+        });
+
+        // 历史记录点击
+        const historyItems = document.querySelectorAll('.history-item');
+        historyItems.forEach(item => {
+            item.addEventListener('click', () => {
+                // 模拟加载历史记录
+                emptyState.style.display = 'none';
+                promptResult.style.display = 'block';
+                resultMeta.style.display = 'block';
+                
+                // 显示历史提示词
+                promptResult.textContent = item.querySelector('.history-preview').textContent + '\n\nNegative prompt: 模糊, 低质量, 变形, 水印, 文字';
+                
+                // 启用按钮
+                copyBtn.disabled = false;
+                useInGeneratorBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>
